@@ -1,0 +1,55 @@
+import roslib, rospy
+import sys, time, os
+import numpy as np
+import skeleton
+
+D = []
+
+class OtpGenerator:
+
+    def __init__(self,offset,t_demo,Pb):
+
+        self.offset = offset
+        self.t_demo = t_demo
+        self.baxter = Pb
+
+        A = skeleton.data()
+        Ph_rs = A[0,1:3]
+        Ph_rw = A[1,1:3]
+        Ph_ls = A[2,1:3]
+        Ph_lw = A[3,1:3]
+
+        D = np.append(D,Ph_rw)
+
+    def static(self):
+
+        p_1m = np.true_divide((Ph_rs + self.baxter[2,0:2]), 2)
+        p_2m = np.true_divide((Ph_ls + self.baxter[0,0:2]), 2)
+        p_3m = np.true_divide((Ph_rw + self.baxter[3,0:2]), 2)
+        p_4m = np.true_divide((Ph_lw + self.baxter[1,0:2]), 2)
+
+        otp_s = np.true_divide((p_1m + p_2m + p_3m + p_4m), 4)
+        return otp_s
+
+    def dynamic(self):
+
+        P_obj = np.add(Ph_rw, [0, self.offset, 0])
+
+        P_new = D[D.shape(0)-1,1:3]
+        P_old = D[D.shape(0)-2,1:3]
+
+        P_goal = (w*otp_s) + ((1-w)*P_obj)
+
+        dt = D[D.shape(0)-1,4] - D[D.shape(0)-1,4]
+
+        V = (P_new - P_old)/dt
+
+        t_goal = (P_goal - P_obj)/V
+
+        return t_goal, P_goal
+
+
+def __main__
+
+if __name__ == '__main__':
+    main(sys.argv)
