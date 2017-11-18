@@ -1,3 +1,5 @@
+# NOT a ROS executable
+
 # Detects Orange object
 
 import cv2
