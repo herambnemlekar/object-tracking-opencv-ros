@@ -1,1 +1,3 @@
-# Track an Object in OpenCV for imaage stream from Kinect connected to ROS
+# Track an Object in OpenCV for image stream from Kinect connected to ROS
+
+
