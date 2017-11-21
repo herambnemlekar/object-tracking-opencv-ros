@@ -4,7 +4,6 @@ roslib.load_manifest('otp')
 import rospy
 import sys, time, os
 import numpy as np
-from kinect_data.msg import skeleton
 from geometry_msgs.msg import PointStamped, Point
 from std_msgs.msg import Time
 
@@ -14,7 +13,7 @@ class OtpGenerator:
 
     def __init__(self):
 		
-	#Publishing the estimated goal position and total trajectory time
+		#Publishing the estimated goal position and total trajectory time
         self.goal_pub = rospy.Publisher("/OtpGenerator/goal_position", Point, queue_size=1)
         self.time_pub = rospy.Publisher("/OtpGenerator/goal_time", Time, queue_size=1)
 		
@@ -23,47 +22,47 @@ class OtpGenerator:
         self.t_demo = 1.5	#Total time of the demonstration
         self.baxter = []	#Baxter arm length 
         self.w = 1		#Weight factor for determining the confidence in the dynamic OTP
-	self.i = 0              #Initialization for otp loop
-	
-	#Subscribing to the skeleton data from kinect
-        self.data_sub = rospy.Subscriber("/skeleton_data", skeleton, self.static, queue_size = 1)	
+
+        self.data_sub = rospy.Subscriber("pyclient/skeleton_data", PointStamped, self.static, queue_size = 1) #Collecting sensor data
+		
+		self.static(data_sub)
+		self.dynamic()
+
+		
 		
     def static(self,data):
-
-	self.data = data
+	
+		self.data = data
 		
-	#Formatting the sensor data
-	self.D = np.append(self.D,self.data[1,1:4]) 
-	self.D = self.D[(self.D.shape(0) - 2):(self.D.shape(0) - 1),:]
-
-	if i==0:
+		#Formatting the sensor data
+		self.D = np.append(self.D,self.data[1,1:4]) 
+		self.D = self.D[(self.D.shape(0) - 2):(self.D.shape(0) - 1),:]
+		
+		#Object position
+		self.P_obj = np.add(self.data[1, 1:3], [0, self.offset, 0])
+		
+		#Human wrist position: current and previous
+		self.P_new = self.D[self.D.shape(0) - 1, 1:3]
+		self.P_old = self.D[self.D.shape(0) - 2, 1:3]
+		
+		#Total time of the demonstration
+		self.t_goal = self.t_demo
+		
 		#Extracting wrist and shoulder positions of human and baxter
 		P1 = np.true_divide((self.data[0, 1:3] + self.baxter[2,0:2]), 2) #Right Shoulder of human & Left Shoulder of Baxter
 		P2 = np.true_divide((self.data[2, 1:3] + self.baxter[0,0:2]), 2) #Left Shoulder of human & Right Shoulder of Baxter
 		P3 = np.true_divide((self.data[1, 1:3] + self.baxter[3,0:2]), 2) #Right Wrist of human & Left Wrist of Baxter
 		P4 = np.true_divide((self.data[3, 1:3] + self.baxter[1,0:2]), 2) #Left Wrist of human & Right Wrist of Baxter
-	
-		self.otp_s = np.true_divide((P1 + P2 + P3 + P4), 4) #OTP static calculation 
-		i = i + 1
 		
-	self.dynamic()
+		self.otp_s = np.true_divide((P1 + P2 + P3 + P4), 4) #OTP static calculation using human and baxter arm lengths and position
+		
+		#Distance between current location and goal position
+		self.e_old = np.abs(og.P_old - og.otp_s)
+		self.e_new = np.abs(og.P_new - og.otp_s)
 
+	
 	
     def dynamic(self):
-
-	#Object position
-	self.P_obj = np.add(self.data[1, 1:3], [0, self.offset, 0])
-		
-	#Human wrist position: current and previous
-	self.P_new = self.D[self.D.shape(0) - 1, 1:3]
-	self.P_old = self.D[self.D.shape(0) - 2, 1:3]
-	
-	#Total time of the demonstration
-	self.t_goal = self.t_demo
-	
-	#Distance between current location and goal position
-	self.e_old = np.abs(self.P_old - self.otp_s)
-	self.e_new = np.abs(self.P_new - self.otp_s)
 	
 	if (self.e_new - self.e_old) < 0.02:	#WHAT THIS DO????????
 
@@ -84,10 +83,12 @@ class OtpGenerator:
 		
 		
 def main(args):
-    og = OtpGenerator()	
+    og = OtpGenerator()
+	
     rospy.init_node('OtpGenerator', anonymous=True)
-    try:
-	rospy.spin()
+    
+	try:
+        rospy.spin()
     except KeyboardInterrupt:
         print ("Shutting down")
 
